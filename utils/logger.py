@@ -1,0 +1,99 @@
+import shutil
+from datetime import datetime
+
+import numpy as np
+import wandb
+
+from pathlib import Path
+
+import torch
+from torch import nn
+
+wandb.login()
+
+class Logger:
+    def __init__(self, project, **params):
+        self.run = wandb.init(
+            # Set the project where this run will be logged
+            project=project,
+            # Track hyperparameters and run metadata
+            config=params,
+        )
+
+        time=datetime.now().strftime("%Y-%m-%d-%H%M%S")
+        log_dir=Path(f"output/{project}{time}")
+        log_dir.mkdir()
+
+        self.log_dir=log_dir
+        self.max_validation_avg_dice=0
+
+    def log_metrics(self, metrics, step=None, commit=True):
+        self.run.log(metrics, step=step, commit=commit)
+
+    def begin_epoch(self, epoch_progress, classes):
+        self.progress=epoch_progress
+        self.classes=classes
+
+        self.step_loss_metrics=[] # [step_length]
+        self.step_dice_metrics=[] # [step_length, num_class]
+
+        print(("\n" + "%12s" * 3)% ("Epoch", "Loss", "Dice"))
+
+    def log_step(self, epoch, epochs, loss:float, dice:np.ndarray):
+        self.step_loss_metrics.append(loss)
+        self.step_dice_metrics.extend(dice)
+
+        self.progress.set_description(
+            ("%12s" * 1 + "%12.4g" * 2) % (
+                f"{epoch+1}/{epochs}",
+                loss,
+                dice.mean()
+            )
+        )
+
+    def log_epoch(self, phase, epoch):
+        """
+            Params:
+                phase: ["train", "val"]
+            Returns:
+                - if it's best fitness
+                - metrics
+        """
+        loss = np.array(self.step_loss_metrics).mean()
+        dice = np.array(self.step_dice_metrics).mean(axis=0)
+
+        dice_metric={f"{class_name}": dice_score for class_name,dice_score in zip(self.classes,dice)}
+        avg_dice=dice.mean()
+        metrics={
+            f"{phase}/loss": loss,
+            f"{phase}/dice": dice_metric,
+            f"{phase}/dice.avg": avg_dice
+        }
+        print(metrics)
+        self.log_metrics(metrics, step=epoch, commit=phase=="val")
+
+        is_best_fit=avg_dice>self.max_validation_avg_dice
+
+        if phase=="val" and is_best_fit:
+            self.max_validation_avg_dice=avg_dice
+            return True, metrics
+        else:
+            return False, metrics
+        
+    def log_checkpoint(self, is_best_fit, num_epoch, metrics, model:nn.Module, optimizer, config):
+        ckpt = {
+            "epoch": num_epoch,
+            "metrics": metrics,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "opt": config,
+            "date": str(datetime.now()),
+        }
+
+        torch.save(ckpt, self.log_dir / "latest.pt")
+        if is_best_fit:
+            shutil.copy(self.log_dir / "latest.pt", self.log_dir / "best.pt")
+            print("Best model saved")
+
+if __name__=="__main__":
+    pass

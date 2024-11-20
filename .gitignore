@@ -1,0 +1,13 @@
+.ipynb_checkpoints/
+.vscode/
+.idea/
+data/
+reference/
+tests/
+output/
+wandb/
+scripts/
+__pycache__/
+*.jpg
+EDA.ipynb
+test*

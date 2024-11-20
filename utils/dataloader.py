@@ -1,0 +1,136 @@
+"""
+References:
+- https://pytorch.org/vision/0.15/transforms.html
+- https://pytorch.org/vision/main/auto_examples/transforms/plot_transforms_getting_started.html
+"""
+import os
+import json
+from pathlib import Path
+
+import numpy as np
+import cv2
+from PIL import Image
+from sklearn.model_selection import KFold
+
+import torch
+from torch.utils.data import Dataset, DataLoader, Subset
+from torchvision.transforms.functional import to_tensor, resize
+
+from utils.plot import plot_image
+
+def polygons2masks(shape, polygons, labels)-> np.ndarray[np.uint8]:
+    """
+        Multiple classes support
+    """
+    masks = np.zeros(shape, dtype=np.uint8)
+
+    for polygon, label in zip(polygons, labels):
+        polygon = np.asarray(polygon, dtype=np.int32)
+        polygon=polygon[None] # fillPoly requires shape of [1, N, 2]
+        cv2.fillPoly(masks[label-1], polygon, color=1)
+        
+    return masks
+
+def polygons2instanceMasks(img_size, polygons):
+    masks = []
+    for polygon in polygons:
+        mask = np.zeros(img_size, dtype=np.uint8) # fillPoly doesn't suppot bool type
+        polygon = np.asarray(polygon).astype(np.int32) # fillPoly doesn't suppot float type
+        polygon=polygon[None] # fillPoly requires shape of [1, N, 2]
+        cv2.fillPoly(mask, polygon, color=1)
+        masks.append(mask)
+
+    return np.array(masks)
+
+class PleomorphicAdenomaDataset(Dataset):
+    def __init__(self, path: Path) -> None:
+        super().__init__()
+
+        entries=os.listdir(path/"raw")
+        json_files=[entry for entry in entries if entry.endswith(".json")]
+        json_files.sort()
+
+        self.dir=path/"raw"
+        self.json_files=json_files
+        self.cls2idx, self.classes=self.purse_dataset(path/"meta.json")
+
+    def __len__(self):
+        return len(self.json_files)
+    
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, str]:
+        """
+            return:
+                image: (3,1200,1920)  Tensor[torch.float32]
+                labels: (n,)          
+                masks: (n,1200,1920)  Tensor[torch.uint8]
+                image_path: str
+        """
+        # read image and annotations
+        json_file_path=self.dir/self.json_files[idx]
+        with open(json_file_path, 'r') as fp:
+            data=json.load(fp)
+
+        image_path, annotations=data["imagePath"], data["shapes"]
+        
+        # process image
+        image=Image.open(os.path.join(self.dir, image_path))
+        image=to_tensor(image)
+
+        # process annotations
+        labels=[]
+        polygons=[]
+        for annotation in annotations:
+            labels.append(self.cls2idx[annotation["label"]])
+            polygons.append(annotation["points"])
+        labels=np.asarray(labels)
+        mask_shape=(len(self.classes), *image.shape[-2:])
+        masks=polygons2masks(mask_shape, polygons, labels)
+        masks=torch.tensor(masks)
+
+        # transform image and masks
+        image=resize(image, size=(640, 1024), antialias=True) # 1200x1920 -> 640x1024
+        masks=resize(masks, size=(640, 1024), antialias=True) # 1200x1920 -> 640x1024
+
+        return image, masks, image_path
+    
+    def view(self, idx_ls):
+        json_files=[self.json_files[idx] for idx in idx_ls]
+        self.json_files=json_files
+
+    @classmethod
+    def purse_dataset(cls, meta_file):
+        with open(meta_file, 'r') as fp:
+            meta=json.load(fp)
+
+        cls2idx={i["name"]: i["id"] for i in meta["classes"]}
+        classes=[i["name"] for i in meta["classes"]]
+        return cls2idx, classes
+
+
+def get_dataloader(name, fold, batch_size, data_workers):
+    """
+        dataset: dataset name
+            - PA
+    """
+    if name=="PA":
+        path=Path("data/pleomorphic-adenoma/")
+        train_dataset=PleomorphicAdenomaDataset(path)
+        val_dataset=PleomorphicAdenomaDataset(path)
+
+        kfold = KFold(n_splits=5)
+        splits = list(kfold.split(train_dataset))
+        train_idx, val_idx = splits[fold]
+
+        train_dataset.view(train_idx)
+        val_dataset.view(val_idx)
+
+        train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers)
+        val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers)
+
+    return train_dataset, val_dataset, train_dataloader, val_dataloader
+
+if __name__=="__main__":
+    get_dataloader("PA", 0, 4, 4)
+    # dataset=PleomorphicAdenomaDataset("data/pleomorphic-adenoma/raw")
+    # dataset[0]
+    pass
