@@ -5,7 +5,7 @@ import torch.optim as optim
 
 from utils.common import set_seeds
 from utils.dataloader import get_dataloader
-from utils.metrics import WeightedBinaryDiceLoss
+from utils.metrics import WeightedBinaryDiceLoss, mIoU
 from utils.logger import Logger
 from config import config
 from models import U_Net
@@ -45,10 +45,13 @@ def train(
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+            with torch.no_grad():
+                miou=mIoU(outputs, masks)
 
             loss=loss.item()
             dice=dice.cpu().detach().numpy()
-            logger.log_step(epoch, epochs, loss, dice)
+            miou=miou.cpu().detach().numpy()
+            logger.log_step(epoch, epochs, loss, dice, miou)
 
         logger.log_epoch(phase="train", epoch=epoch)
 

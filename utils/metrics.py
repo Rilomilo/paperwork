@@ -66,11 +66,38 @@ class Dice(nn.Module):
 
         return loss, dice
 
-# def dice_coefficient(pred, target, threshold=0.5):
-#     pred = (pred > threshold).astype(int)  # 将Softmax输出转为二值
-#     intersection = np.sum(pred * target)
-#     return (2. * intersection) / (np.sum(pred) + np.sum(target))
+def dice_coefficient(preds, target):
+    """
+        preds & target: [N, n_classes, H, W]
+        dice = 2 * intersect/(preds_area + target_area)
+    """
+    smooth = 1e-5
+    preds = (preds > 0.5).int()
+
+    intersect = torch.sum(preds * target, dim=(-1, -2))
+    target_area = torch.sum(target, dim=(-1, -2))
+    preds_area = torch.sum(preds , dim=(-1, -2))
+    dice = (2 * intersect + smooth) / (preds_area + target_area + smooth) # [N, n_classes]
+
+    return dice
+
+def mIoU(preds, target):
+    """
+        preds & target: [N, n_classes, H, W]
+        dice =  TP/(TP+FP+FN)
+    """
+    smooth = 1e-5
+    preds = (preds > 0.5).int()
+
+    intersection = torch.sum(preds * target, dim=(-1, -2))
+    target_area = torch.sum(target, dim=(-1, -2))
+    preds_area = torch.sum(preds , dim=(-1, -2))
+    score = (intersection + smooth) / (preds_area + target_area - intersection + smooth) # [N, n_classes]
+
+    return score
 
 if __name__=="__main__":
-    dice=Dice()
-    
+    pred = torch.rand(2, 4, 640, 1024)
+    target = torch.rand(2, 4, 640, 1024)
+    score = mIoU(pred, target)
+    pass

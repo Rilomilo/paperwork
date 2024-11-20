@@ -25,7 +25,7 @@ class Logger:
         log_dir.mkdir()
 
         self.log_dir=log_dir
-        self.max_validation_avg_dice=0
+        self.max_validation_mixed_metric=0
 
     def log_metrics(self, metrics, step=None, commit=True):
         self.run.log(metrics, step=step, commit=commit)
@@ -36,18 +36,21 @@ class Logger:
 
         self.step_loss_metrics=[] # [step_length]
         self.step_dice_metrics=[] # [step_length, num_class]
+        self.step_miou_metrics=[] # [step_length, num_class]
 
-        print(("\n" + "%12s" * 3)% ("Epoch", "Loss", "Dice"))
+        print(("\n" + "%12s" * 4)% ("Epoch", "Loss", "Dice", "mIoU"))
 
-    def log_step(self, epoch, epochs, loss:float, dice:np.ndarray):
+    def log_step(self, epoch, epochs, loss:float, dice:np.ndarray, miou:np.ndarray):
         self.step_loss_metrics.append(loss)
         self.step_dice_metrics.extend(dice)
+        self.step_miou_metrics.extend(miou)
 
         self.progress.set_description(
-            ("%12s" * 1 + "%12.4g" * 2) % (
+            ("%12s" * 1 + "%12.4g" * 3) % (
                 f"{epoch+1}/{epochs}",
                 loss,
-                dice.mean()
+                dice.mean(),
+                miou.mean()
             )
         )
 
@@ -61,21 +64,26 @@ class Logger:
         """
         loss = np.array(self.step_loss_metrics).mean()
         dice = np.array(self.step_dice_metrics).mean(axis=0)
+        miou = np.array(self.step_miou_metrics).mean(axis=0)
 
         dice_metric={f"{class_name}": dice_score for class_name,dice_score in zip(self.classes,dice)}
-        avg_dice=dice.mean()
+        miou_metric={f"{class_name}": miou_score for class_name,miou_score in zip(self.classes,miou)}
+        dice_metric.update({"avg": dice.mean()})
+        miou_metric.update({"avg": miou.mean()})
+        mixed_metric = 0.5 * dice_metric["avg"] + 0.5 * miou_metric["avg"]
+
         metrics={
             f"{phase}/loss": loss,
             f"{phase}/dice": dice_metric,
-            f"{phase}/dice.avg": avg_dice
+            f"{phase}/miou": miou_metric
         }
         print(metrics)
         self.log_metrics(metrics, step=epoch, commit=phase=="val")
 
-        is_best_fit=avg_dice>self.max_validation_avg_dice
+        is_best_fit=mixed_metric>self.max_validation_mixed_metric
 
         if phase=="val" and is_best_fit:
-            self.max_validation_avg_dice=avg_dice
+            self.max_validation_mixed_metric = mixed_metric
             return True, metrics
         else:
             return False, metrics

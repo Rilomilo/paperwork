@@ -3,7 +3,7 @@ from tqdm import tqdm
 import torch
 
 from utils.common import set_seeds
-from utils.metrics import WeightedBinaryDiceLoss
+from utils.metrics import WeightedBinaryDiceLoss, dice_coefficient, mIoU
 from utils.logger import Logger
 
 def validate(
@@ -30,11 +30,14 @@ def validate(
 
         with torch.no_grad():
             outputs = model(images)
-            loss, dice = loss_fn(outputs, masks)
+            loss, _ = loss_fn(outputs, masks)
+            dice = dice_coefficient(outputs, masks)
+            miou = mIoU(outputs, masks)
             
         loss=loss.item()
         dice=dice.cpu().detach().numpy()
-        logger.log_step(epoch, epochs, loss, dice)
+        miou=miou.cpu().detach().numpy()
+        logger.log_step(epoch, epochs, loss, dice, miou)
 
     is_best, metrics=logger.log_epoch(phase="val", epoch=epoch)
 
