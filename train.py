@@ -36,7 +36,7 @@ def train(
 
         progress=tqdm(train_dataloader)
         logger.begin_epoch(progress, train_dataset.classes)
-        for images, masks, _ in progress:
+        for i, (images, masks, _) in enumerate(progress):
             images, masks = images.to(device), masks.to(device)
 
             outputs = model(images)
@@ -66,7 +66,8 @@ def train(
             logger
         )
         logger.log_checkpoint(is_best_fit, epoch, metrics, model, optimizer, config)
-        
+    
+    logger.finish()
 
 def main():
     params={

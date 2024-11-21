@@ -41,7 +41,7 @@ def plot_image(data, path="plot.jpg"):
     data = Image.fromarray(data)
     data.save(path)
 
-def visualize_label(image, masks, label_names, output_path):
+def visualize_label(image, masks, label_names, output_path=None)-> np.ndarray:
     image=to_image(image)
     label_names=["background"]+label_names
 
@@ -50,8 +50,10 @@ def visualize_label(image, masks, label_names, output_path):
         mask[layer>0.5]=idx+1
 
     viz = imgviz.label2rgb(mask, image, label_names=label_names)
+    if output_path:
+        Image.fromarray(viz).save(output_path)
 
-    Image.fromarray(viz).save(output_path)
+    return viz
 
 if __name__=="__main__":
     data=torch.ones((1,224,224,3))

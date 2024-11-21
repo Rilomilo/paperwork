@@ -25,7 +25,7 @@ def validate(
 
     progress=tqdm(val_dataloader)
     logger.begin_epoch(progress, val_dataset.classes)
-    for images, masks, _ in progress:
+    for i, (images, masks, image_paths) in enumerate(progress):
         images, masks = images.to(device), masks.to(device)
 
         with torch.no_grad():
@@ -37,7 +37,14 @@ def validate(
         loss=loss.item()
         dice=dice.cpu().detach().numpy()
         miou=miou.cpu().detach().numpy()
+
         logger.log_step(epoch, epochs, loss, dice, miou)
+        # visualize first 2 batch
+        if i<=1:
+            images=images.cpu().detach().numpy()
+            outputs=outputs.cpu().detach().numpy()
+            masks=masks.cpu().detach().numpy()
+            logger.log_visualization(image_paths, epoch, images, outputs, masks, val_dataset.classes ,dice)
 
     is_best, metrics=logger.log_epoch(phase="val", epoch=epoch)
 

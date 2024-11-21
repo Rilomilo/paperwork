@@ -1,13 +1,13 @@
 import shutil
+from pathlib import Path
 from datetime import datetime
 
 import numpy as np
 import wandb
-
-from pathlib import Path
-
 import torch
 from torch import nn
+
+from utils.plot import visualize_label, to_image
 
 wandb.login()
 
@@ -26,6 +26,7 @@ class Logger:
 
         self.log_dir=log_dir
         self.max_validation_mixed_metric=0
+        self.viz_table = wandb.Table(columns=["name", "epoch", "image", "pred", "label", "dice"])
 
     def log_metrics(self, metrics, step=None, commit=True):
         self.run.log(metrics, step=step, commit=commit)
@@ -102,6 +103,20 @@ class Logger:
         if is_best_fit:
             shutil.copy(self.log_dir / "latest.pt", self.log_dir / "best.pt")
             print("Best model saved")
+
+    def log_visualization(self, names, epoch, images, preds, labels, classes, dice):
+        for name, image, pred, label, dice_score in zip(names, images, preds, labels, dice):
+            image=to_image(image)
+            label=visualize_label(image, label, classes)
+            pred=visualize_label(image, pred, classes)
+            image = wandb.Image(image)
+            pred = wandb.Image(pred)
+            label = wandb.Image(label)
+
+            self.viz_table.add_data(name, epoch, image, pred, label, dice_score)
+
+    def finish(self):
+        self.run.log({"Visualization": self.viz_table})
 
 if __name__=="__main__":
     pass
