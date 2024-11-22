@@ -43,13 +43,19 @@ def plot_image(data, path="plot.jpg"):
 
 def visualize_label(image, masks, label_names, output_path=None)-> np.ndarray:
     image=to_image(image)
-    label_names=["background"]+label_names
 
-    mask=np.zeros(shape=masks.shape[-2:], dtype=np.uint8)
+    num_class=len(label_names)
+    label_names=["background"]+label_names+["overlap"]
+    
+    masks=masks>0.5
+    overlap_mask=masks.sum(axis=0)>1
+    composed_mask=np.zeros(shape=masks.shape[-2:], dtype=np.uint8)
+
     for idx, layer in enumerate(masks):
-        mask[layer>0.5]=idx+1
+        composed_mask[layer]=idx+1
+    composed_mask[overlap_mask]=num_class+1
 
-    viz = imgviz.label2rgb(mask, image, label_names=label_names)
+    viz = imgviz.label2rgb(composed_mask, image, label_names=label_names, font_size=12)
     if output_path:
         Image.fromarray(viz).save(output_path)
 

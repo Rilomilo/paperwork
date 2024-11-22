@@ -43,9 +43,6 @@ def validate(
         logger.log_step(epoch, epochs, loss, dice, miou)
         # visualize first 2 batch
         if i<=1:
-            images=images.cpu().detach().numpy()
-            outputs=outputs.cpu().detach().numpy()
-            masks=masks.cpu().detach().numpy()
             logger.log_visualization(image_paths, epoch, images, outputs, masks, val_dataset.classes ,dice)
 
     is_best, metrics=logger.log_epoch(phase="val", epoch=epoch)

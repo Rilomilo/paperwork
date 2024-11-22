@@ -6,6 +6,7 @@ import numpy as np
 import wandb
 import torch
 from torch import nn
+from torchvision.transforms.functional import resize
 
 from utils.plot import visualize_label, to_image
 
@@ -105,6 +106,15 @@ class Logger:
             print("Best model saved")
 
     def log_visualization(self, names, epoch, images, preds, labels, classes, dice):
+        size=224 # resize images to improve loading speed
+        images = resize(images, size=size, antialias=True)
+        preds = resize(preds, size=size, antialias=True)
+        labels = resize(labels, size=size, antialias=True)
+        images=images.cpu().detach().numpy()
+        preds=preds.cpu().detach().numpy()
+        labels=labels.cpu().detach().numpy()
+        dice = dice.round(4) # keep 4 decimal places only
+        
         for name, image, pred, label, dice_score in zip(names, images, preds, labels, dice):
             image=to_image(image)
             label=visualize_label(image, label, classes)
@@ -112,6 +122,7 @@ class Logger:
             image = wandb.Image(image)
             pred = wandb.Image(pred)
             label = wandb.Image(label)
+            dice_score=dict(zip(classes, list(dice_score)))
 
             self.viz_table.add_data(name, epoch, image, pred, label, dice_score)
 
