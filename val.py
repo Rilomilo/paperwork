@@ -2,23 +2,25 @@ from tqdm import tqdm
 
 import torch
 
+from config import config
 from utils.common import set_seeds
 from utils.metrics import WeightedBinaryDiceLoss, dice_coefficient, mIoU
 from utils.logger import Logger
+from utils.dataloader import get_dataloader
+from models import load_checkpoint, get_model
 
 def validate(
         device,
         epoch,
         epochs,
         model,
-        loss_weight,
         val_dataset,
         val_dataloader,
         logger: Logger
 ):
     device=torch.device(device)
 
-    loss_fn = WeightedBinaryDiceLoss(loss_weight, softmax=True)
+    loss_fn = WeightedBinaryDiceLoss(config["loss_weight"], softmax=True)
 
     model=model.to(device)
     model.eval()
@@ -50,6 +52,36 @@ def validate(
 
     return is_best, metrics
 
+def main():
+    params={
+        "checkpoint": "output/paperwork2024-11-22-122955/latest.pt"
+    }
+    config.update(params)
+
+    device, model, batch_size, data_workers, fold, checkpoint=config["device"], config["model"], config["batch_size"], config["data_workers"], config["fold"], config["checkpoint"]
+
+    train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader("PA", fold, batch_size=batch_size, data_workers=data_workers)
+    
+    ckpt = load_checkpoint(checkpoint)
+    epoch, weights, ckpt_config = ckpt["epoch"], ckpt["model"], ckpt["opt"]
+    epochs=ckpt_config["epochs"]
+
+    model = get_model(config["model"], output_ch=len(val_dataset.classes), weights=weights)
+
+    logger = Logger(**config)
+
+    validate(
+        device,
+        epoch,
+        epochs,
+        model,
+        val_dataset,
+        val_dataloader,
+        logger
+    )
+
+    logger.finish()
 
 if __name__=="__main__":
     set_seeds(0)
+    main()

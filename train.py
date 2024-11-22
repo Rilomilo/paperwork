@@ -8,16 +8,17 @@ from utils.dataloader import get_dataloader
 from utils.metrics import WeightedBinaryDiceLoss, mIoU
 from utils.logger import Logger
 from config import config
-from models import U_Net
+from models import get_model
 from val import validate
 
 def train(
         epochs,
-        batch_size,
+        model,
         device,
         loss_weight,
-        data_workers,
         lr,
+        batch_size,
+        data_workers,
         fold,
         **kwargs
 ):
@@ -25,7 +26,7 @@ def train(
     logger=Logger(**config)
     train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader("PA", fold, batch_size=batch_size, data_workers=data_workers)
     num_class=len(train_dataset.classes)
-    model = U_Net(img_ch=3, output_ch=num_class).to(device)
+    model = get_model(model, output_ch=num_class).to(device)
 
     loss_fn = WeightedBinaryDiceLoss(loss_weight, softmax=True)
 
@@ -71,11 +72,7 @@ def train(
 
 def main():
     params={
-        "epochs":10,
-        "batch_size":4,
-        "data_workers": 2,
-        "lr":1e-4,
-        "fold":0
+
     }
     config.update(params)
     print(config)
@@ -84,3 +81,4 @@ def main():
 if __name__=="__main__":
     set_seeds(0)
     main()
+    # 修改学习率调整策略，调整参数位置，增加新数据集
