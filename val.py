@@ -20,7 +20,7 @@ def validate(
 ):
     device=torch.device(device)
 
-    loss_fn = WeightedBinaryDiceLoss(config["loss_weight"], softmax=True)
+    loss_fn = WeightedBinaryDiceLoss(config["loss_weight"])
 
     model=model.to(device)
     model.eval()
@@ -32,6 +32,10 @@ def validate(
 
         with torch.no_grad():
             outputs = model(images)
+            # turn scores to one hot
+            outputs = outputs.argmax(axis=1)
+            outputs = torch.nn.functional.one_hot(outputs, len(val_dataset.classes)).permute(0,3,1,2)
+
             loss, _ = loss_fn(outputs, masks)
             dice = dice_coefficient(outputs, masks)
             miou = mIoU(outputs, masks)

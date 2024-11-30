@@ -21,7 +21,7 @@ class DiceLoss(nn.Module):
         return loss, dice
 
 class WeightedBinaryDiceLoss(nn.Module):
-    def __init__(self, loss_weight, softmax):
+    def __init__(self, loss_weight, softmax=False):
         super(WeightedBinaryDiceLoss, self).__init__()
         self.dice_fn = DiceLoss()
         self.bce_fn= BCEWithLogitsLoss()
@@ -31,7 +31,7 @@ class WeightedBinaryDiceLoss(nn.Module):
     def forward(self, prediction, mask:torch.Tensor):
         """
             prediction: torch.float32[batch_size, n_classes, H, W]
-            mask: 
+            mask: torch.int64[batch_size, n_classes, H, W]
         """
         if self.softmax:
             prediction = torch.softmax(prediction, dim=1)
@@ -39,8 +39,12 @@ class WeightedBinaryDiceLoss(nn.Module):
             assert prediction.max() <= 1 and prediction.min()>=0, "prediction scores should be between 0 and 1"
 
         # bce_fn needs preds and target to be the same type
-        if mask.dtype==torch.uint8:
-            mask = mask.float() # torch.float32
+        mask = mask.float() # torch.float32
+        prediction = prediction.float()
+
+        # ignore background class
+        prediction=prediction[:,1:,:,:]
+        mask = mask[:,1:,:,:]
 
         dice_loss, dice = self.dice_fn(prediction, mask)
         bce_loss = self.bce_fn(prediction, mask)
@@ -71,6 +75,10 @@ def dice_coefficient(preds, target):
         preds & target: [N, n_classes, H, W]
         dice = 2 * intersect/(preds_area + target_area)
     """
+    # ignore background class
+    preds=preds[:,1:,:,:]
+    target = target[:,1:,:,:]
+
     smooth = 1e-5
     preds = (preds > 0.5).int()
 
@@ -86,6 +94,10 @@ def mIoU(preds, target):
         preds & target: [N, n_classes, H, W]
         dice =  TP/(TP+FP+FN)
     """
+    # ignore background class
+    preds=preds[:,1:,:,:]
+    target = target[:,1:,:,:]
+
     smooth = 1e-5
     preds = (preds > 0.5).int()
 

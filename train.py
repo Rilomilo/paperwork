@@ -28,7 +28,7 @@ def train(
     num_class=len(train_dataset.classes)
     model = get_model(model, output_ch=num_class).to(device)
 
-    loss_fn = WeightedBinaryDiceLoss(loss_weight, softmax=True)
+    loss_fn = WeightedBinaryDiceLoss(loss_weight)
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
 
@@ -61,7 +61,6 @@ def train(
             epoch,
             epochs,
             model,
-            loss_weight,
             val_dataset,
             val_dataloader,
             logger

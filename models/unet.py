@@ -3,7 +3,6 @@ This file is part of https://github.com/LeeJunHyun/Image_Segmentation. Some modi
 """
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.nn import init
 
 # def init_weights(net, init_type='normal', gain=0.02):
@@ -124,5 +123,6 @@ class U_Net(nn.Module):
 
         d1 = self.Conv_1x1(d2)
         
+        d1 = nn.functional.softmax(d1, dim=1)
 
         return d1

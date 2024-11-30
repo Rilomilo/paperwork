@@ -34,7 +34,7 @@ class Logger:
 
     def begin_epoch(self, epoch_progress, classes):
         self.progress=epoch_progress
-        self.classes=classes
+        self.classes=classes[1:] # ignore background class
 
         self.step_loss_metrics=[] # [step_length]
         self.step_dice_metrics=[] # [step_length, num_class]
@@ -122,7 +122,7 @@ class Logger:
             image = wandb.Image(image)
             pred = wandb.Image(pred)
             label = wandb.Image(label)
-            dice_score=dict(zip(classes, list(dice_score)))
+            dice_score=dict(zip(classes[1:], list(dice_score)))
 
             self.viz_table.add_data(name, epoch, image, pred, label, dice_score)
 

@@ -18,16 +18,35 @@ from torchvision.transforms.functional import to_tensor, resize
 
 from utils.plot import plot_image
 
-def polygons2masks(shape, polygons, labels)-> np.ndarray[np.uint8]:
+def polygons2masks(num_class, shape, polygons:list, labels:list)-> torch.Tensor:
     """
         Multiple classes support
     """
-    masks = np.zeros(shape, dtype=np.uint8)
+    mask = np.zeros(shape, dtype=np.uint8)
+    
+    if polygons:
+        instance_masks = []
 
-    for polygon, label in zip(polygons, labels):
-        polygon = np.asarray(polygon, dtype=np.int32)
-        polygon=polygon[None] # fillPoly requires shape of [1, N, 2]
-        cv2.fillPoly(masks[label-1], polygon, color=1)
+        for polygon in polygons:
+            instance_mask = np.zeros(shape, dtype=np.uint8)
+            polygon = np.asarray(polygon, dtype=np.int32)
+            polygon=polygon[None] # fillPoly requires shape of [1, N, 2]
+            cv2.fillPoly(instance_mask, polygon, color=1)
+            instance_masks.append(instance_mask)
+
+        labels=np.asarray(labels)
+        instance_masks=np.asarray(instance_masks)
+        # draw masks from larger to smaller to prevent smaller masks from being covered by larger masks
+        instance_areas=instance_masks.sum(axis=(1,2))
+        order=np.argsort(instance_areas)
+        labels=labels[order][::-1]
+        instance_masks=instance_masks[order][::-1]
+        
+        for instance_mask, label in zip(instance_masks, labels):
+            mask[instance_mask==1]=label
+
+    mask=torch.tensor(mask, dtype=torch.long) # one_hot requires long type
+    masks=torch.nn.functional.one_hot(mask, num_class).permute(2,0,1)
         
     return masks
 
@@ -82,10 +101,8 @@ class PleomorphicAdenomaDataset(Dataset):
         for annotation in annotations:
             labels.append(self.cls2idx[annotation["label"]])
             polygons.append(annotation["points"])
-        labels=np.asarray(labels)
-        mask_shape=(len(self.classes), *image.shape[-2:])
-        masks=polygons2masks(mask_shape, polygons, labels)
-        masks=torch.tensor(masks)
+        
+        masks=polygons2masks(len(self.classes), image.shape[-2:], polygons, labels)
 
         # transform image and masks
         image=resize(image, size=(640, 1024), antialias=True) # 1200x1920 -> 640x1024
@@ -117,20 +134,20 @@ def get_dataloader(name, fold, batch_size, data_workers):
         train_dataset=PleomorphicAdenomaDataset(path)
         val_dataset=PleomorphicAdenomaDataset(path)
 
-        kfold = KFold(n_splits=5)
+        kfold = KFold(n_splits=5, shuffle=True, random_state=0)
         splits = list(kfold.split(train_dataset))
         train_idx, val_idx = splits[fold]
 
-        train_dataset.view(train_idx)
+        # train_dataset.view(train_idx)
         val_dataset.view(val_idx)
 
-        train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers)
-        val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers)
+        train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
+        val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
 if __name__=="__main__":
-    get_dataloader("PA", 0, 4, 4)
-    # dataset=PleomorphicAdenomaDataset("data/pleomorphic-adenoma/raw")
-    # dataset[0]
+    # get_dataloader("PA", 0, 4, 4)
+    dataset=PleomorphicAdenomaDataset(Path("data/pleomorphic-adenoma"))
+    dataset[0]
     pass
