@@ -61,6 +61,14 @@ def polygons2instanceMasks(img_size, polygons):
 
     return np.array(masks)
 
+def parse_dataset(meta_file):
+    with open(meta_file, 'r') as fp:
+        meta=json.load(fp)
+
+    cls2idx={i["name"]: i["id"] for i in meta["classes"]}
+    classes=[i["name"] for i in meta["classes"]]
+    return cls2idx, classes
+
 class PleomorphicAdenomaDataset(Dataset):
     def __init__(self, path: Path) -> None:
         super().__init__()
@@ -71,7 +79,7 @@ class PleomorphicAdenomaDataset(Dataset):
 
         self.dir=path/"raw"
         self.json_files=json_files
-        self.cls2idx, self.classes=self.purse_dataset(path/"meta.json")
+        self.cls2idx, self.classes=parse_dataset(path/"meta.json")
 
     def __len__(self):
         return len(self.json_files)
@@ -114,15 +122,35 @@ class PleomorphicAdenomaDataset(Dataset):
         json_files=[self.json_files[idx] for idx in idx_ls]
         self.json_files=json_files
 
-    @classmethod
-    def purse_dataset(cls, meta_file):
-        with open(meta_file, 'r') as fp:
-            meta=json.load(fp)
+class TrafficDataset(Dataset):
+    def __init__(self, path: Path) -> None:
+        super().__init__()
 
-        cls2idx={i["name"]: i["id"] for i in meta["classes"]}
-        classes=[i["name"] for i in meta["classes"]]
-        return cls2idx, classes
+        entries=os.listdir(path/"image")
+        entries.sort()
 
+        self.entries=entries
+        self.cls2idx, self.classes=parse_dataset(path/"meta.json")
+
+    def __len__(self):
+        return len(self.entries)
+
+    def __getitem__(self, idx):
+        entry=self.entries[idx]
+
+        image=Image.open(Path("data/traffic/image")/entry).convert("RGB")
+        image=to_tensor(image)
+
+        mask=Image.open(Path("data/traffic/mask")/entry).convert("RGB")
+        mask=torch.tensor(np.array(mask), dtype=torch.long) # one_hot requires long type
+        mask=torch.max(mask, dim=2)[0] 
+        masks=torch.nn.functional.one_hot(mask, len(self.classes)).permute(2,0,1)
+
+        return image, masks, entry
+    
+    def view(self, idx_ls):
+        entries=[self.entries[idx] for idx in idx_ls]
+        self.entries=entries
 
 def get_dataloader(name, fold, batch_size, data_workers):
     """
@@ -133,21 +161,24 @@ def get_dataloader(name, fold, batch_size, data_workers):
         path=Path("data/pleomorphic-adenoma/")
         train_dataset=PleomorphicAdenomaDataset(path)
         val_dataset=PleomorphicAdenomaDataset(path)
+    elif name=="traffic":
+        path=Path("data/traffic/")
+        train_dataset=TrafficDataset(path)
+        val_dataset=TrafficDataset(path)
 
-        kfold = KFold(n_splits=5, shuffle=True, random_state=0)
-        splits = list(kfold.split(train_dataset))
-        train_idx, val_idx = splits[fold]
+    kfold = KFold(n_splits=5, shuffle=True, random_state=0)
+    splits = list(kfold.split(train_dataset))
+    train_idx, val_idx = splits[fold]
+    # train_dataset.view(train_idx)
+    val_dataset.view(val_idx)
 
-        # train_dataset.view(train_idx)
-        val_dataset.view(val_idx)
-
-        train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
-        val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
+    train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
+    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
 if __name__=="__main__":
-    # get_dataloader("PA", 0, 4, 4)
-    dataset=PleomorphicAdenomaDataset(Path("data/pleomorphic-adenoma"))
+    # get_dataloader("traffic", 0, 4, 4)
+    dataset=TrafficDataset(Path("data/traffic/"))
     dataset[0]
     pass

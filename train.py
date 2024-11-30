@@ -17,6 +17,7 @@ def train(
         device,
         loss_weight,
         lr,
+        dataset,
         batch_size,
         data_workers,
         fold,
@@ -24,7 +25,7 @@ def train(
 ):
     device=torch.device(device)
     logger=Logger(**config)
-    train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader("PA", fold, batch_size=batch_size, data_workers=data_workers)
+    train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader(dataset, fold, batch_size=batch_size, data_workers=data_workers)
     num_class=len(train_dataset.classes)
     model = get_model(model, output_ch=num_class).to(device)
 
@@ -71,7 +72,7 @@ def train(
 
 def main():
     params={
-
+        "dataset": "traffic"
     }
     config.update(params)
     print(config)
