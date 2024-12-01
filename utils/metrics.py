@@ -52,24 +52,6 @@ class WeightedBinaryDiceLoss(nn.Module):
 
         return loss, dice
 
-class Dice(nn.Module):
-    def __init__(self):
-        super(Dice, self).__init__()
-
-    def forward(self, preds, target, weight=None):
-        """
-            preds & target: [N, n_classes, H, W]
-            dice = 2 * intersect/(preds_area + target_area)
-        """
-        smooth = 1e-5
-        intersect = torch.sum(preds * target, dim=(-1, -2))
-        target_area = torch.sum(target, dim=(-1, -2))
-        preds_area = torch.sum(preds , dim=(-1, -2))
-        dice = (2 * intersect + smooth) / (preds_area + target_area + smooth) # [N, n_classes]
-        loss = (1 - dice).mean()
-
-        return loss, dice
-
 def dice_coefficient(preds, target):
     """
         preds & target: [N, n_classes, H, W]
