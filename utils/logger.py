@@ -107,9 +107,9 @@ class Logger:
 
     def log_visualization(self, names, epoch, images, preds, labels, classes, dice):
         size=224 # resize images to improve loading speed
-        images = resize(images, size=size, antialias=True)
-        preds = resize(preds, size=size, antialias=True)
-        labels = resize(labels, size=size, antialias=True)
+        images = resize(images, size=size, antialias=False)
+        preds = resize(preds, size=size, antialias=False)
+        labels = resize(labels, size=size, antialias=False)
         images=images.cpu().detach().numpy()
         preds=preds.cpu().detach().numpy()
         labels=labels.cpu().detach().numpy()

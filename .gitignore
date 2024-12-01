@@ -8,6 +8,7 @@ output/
 wandb/
 scripts/
 __pycache__/
+tmp/
 *.jpg
 EDA.ipynb
 test*
