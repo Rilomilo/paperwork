@@ -72,7 +72,8 @@ def train(
 
 def main():
     params={
-        "dataset": "traffic"
+        "dataset": "traffic",
+        "model": "u-resnet34"
     }
     config.update(params)
     print(config)
