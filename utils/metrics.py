@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.nn import BCEWithLogitsLoss
+from torch.nn import BCELoss
 
 class DiceLoss(nn.Module):
     def __init__(self):
@@ -24,7 +24,7 @@ class WeightedBinaryDiceLoss(nn.Module):
     def __init__(self, loss_weight, softmax=False):
         super(WeightedBinaryDiceLoss, self).__init__()
         self.dice_fn = DiceLoss()
-        self.bce_fn= BCEWithLogitsLoss()
+        self.bce_fn= BCELoss()
         self.weight= loss_weight
         self.softmax = softmax
     
