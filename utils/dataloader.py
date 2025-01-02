@@ -152,7 +152,44 @@ class TrafficDataset(Dataset):
         entries=[self.entries[idx] for idx in idx_ls]
         self.entries=entries
 
-def get_dataloader(name, fold, batch_size, data_workers):
+class CityscapesDataset(Dataset):
+    def __init__(self, root, split='train', transform=None):
+        self.root = root
+        self.split = split
+        self.transform = transform
+        self.images_dir = os.path.join(root, 'leftImg8bit', split)
+        self.labels_dir = os.path.join(root, 'gtFine', split)
+        self.image_paths = []
+        self.label_paths = []
+
+        for city in os.listdir(self.images_dir):
+            img_dir = os.path.join(self.images_dir, city)
+            lbl_dir = os.path.join(self.labels_dir, city)
+            for file_name in os.listdir(img_dir):
+                self.image_paths.append(os.path.join(img_dir, file_name))
+                label_name = file_name.replace('_leftImg8bit.png', '_gtFine_labelIds.png')
+                self.label_paths.append(os.path.join(lbl_dir, label_name))
+                
+    def __len__(self):
+            return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+        label_path = self.label_paths[idx]
+
+        image = Image.open(image_path).convert('RGB')
+        label = Image.open(label_path)
+
+        if self.transform:
+            image = self.transform(image)
+        
+        # Convert label image to tensor and process it as necessary for your task
+        # For example, if you want to convert it to a numpy array:
+        label = np.array(label, dtype=np.int32)
+
+        return image, label
+
+def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True):
     """
         dataset: dataset name
             - PA
@@ -169,11 +206,11 @@ def get_dataloader(name, fold, batch_size, data_workers):
     kfold = KFold(n_splits=5, shuffle=True, random_state=0)
     splits = list(kfold.split(train_dataset))
     train_idx, val_idx = splits[fold]
-    # train_dataset.view(train_idx)
+    train_dataset.view(train_idx)
     val_dataset.view(val_idx)
 
-    train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
-    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=True)
+    train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, shuffle=True)
+    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, shuffle=True)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
