@@ -4,6 +4,7 @@ import torchinfo
 
 from .unet import U_Net
 from .common import load_checkpoint
+from .segment_anything import build_sam_vit_b
 
 def get_model(name, output_ch, weights=None):
     if name=="U_Net":
@@ -16,6 +17,8 @@ def get_model(name, output_ch, weights=None):
             classes=output_ch
         )
         model.segmentation_head.add_module("softmax", nn.Softmax(dim=1))
+    elif name=="sam":
+        model = build_sam_vit_b()
     else:
         raise ValueError(f"Model {name} not found")
     
