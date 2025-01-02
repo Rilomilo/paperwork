@@ -27,7 +27,7 @@ class Logger:
 
         self.log_dir=log_dir
         self.max_validation_mixed_metric=0
-        self.viz_table = wandb.Table(columns=["name", "epoch", "image", "pred", "label", "dice"])
+        self.viz_table = wandb.Table(columns=["name", "epoch", "pred", "label", "dice"])
 
     def log_metrics(self, metrics, step=None, commit=True):
         self.run.log(metrics, step=step, commit=commit)
@@ -119,12 +119,11 @@ class Logger:
             image=to_image(image)
             label=visualize_label(image, label, classes)
             pred=visualize_label(image, pred, classes)
-            image = wandb.Image(image)
             pred = wandb.Image(pred)
             label = wandb.Image(label)
             dice_score=dict(zip(classes[1:], list(dice_score)))
 
-            self.viz_table.add_data(name, epoch, image, pred, label, dice_score)
+            self.viz_table.add_data(name, epoch, pred, label, dice_score)
 
     def finish(self):
         self.run.log({"Visualization": self.viz_table})
