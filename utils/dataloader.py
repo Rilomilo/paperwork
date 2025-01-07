@@ -113,8 +113,8 @@ class PleomorphicAdenomaDataset(Dataset):
         masks=polygons2masks(len(self.classes), image.shape[-2:], polygons, labels)
 
         # transform image and masks
-        image=resize(image, size=(640, 1024), antialias=True) # 1200x1920 -> 640x1024
-        masks=resize(masks, size=(640, 1024), antialias=True) # 1200x1920 -> 640x1024
+        image=resize(image, size=(640, 1024), antialias=False) # 1200x1920 -> 640x1024
+        masks=resize(masks, size=(640, 1024), antialias=False) # 1200x1920 -> 640x1024
 
         return image, masks, image_path
     
@@ -146,6 +146,10 @@ class TrafficDataset(Dataset):
         mask=torch.max(mask, dim=2)[0] 
         masks=torch.nn.functional.one_hot(mask, len(self.classes)).permute(2,0,1)
 
+        # transform image and masks
+        image=resize(image, size=(768, 1024), antialias=False) # 480x640 -> 768x1024
+        masks=resize(masks, size=(768, 1024), antialias=False)
+        
         return image, masks, entry
     
     def view(self, idx_ls):
@@ -202,6 +206,8 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
         path=Path("data/traffic/")
         train_dataset=TrafficDataset(path)
         val_dataset=TrafficDataset(path)
+    else:
+        raise ValueError("Invalid dataset name")
 
     kfold = KFold(n_splits=5, shuffle=True, random_state=0)
     splits = list(kfold.split(train_dataset))

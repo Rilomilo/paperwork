@@ -18,7 +18,7 @@ def get_model(name, output_ch, weights=None):
         )
         model.segmentation_head.add_module("softmax", nn.Softmax(dim=1))
     elif name=="sam":
-        model = build_sam_vit_b()
+        model = build_sam_vit_b(output_ch, "weights/sam_vit_b_01ec64.pth")
     else:
         raise ValueError(f"Model {name} not found")
     

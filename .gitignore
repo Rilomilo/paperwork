@@ -9,6 +9,7 @@ wandb/
 scripts/
 __pycache__/
 tmp/
+weights/
 *.jpg
 EDA.ipynb
 test*

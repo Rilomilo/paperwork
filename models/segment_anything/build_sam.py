@@ -34,13 +34,14 @@ def build_sam_vit_l(checkpoint=None):
     )
 
 
-def build_sam_vit_b(checkpoint=None):
+def build_sam_vit_b(num_multimask_outputs, checkpoint=None):
     return _build_sam(
         encoder_embed_dim=768,
         encoder_depth=12,
         encoder_num_heads=12,
         encoder_global_attn_indexes=[2, 5, 8, 11],
-        checkpoint=checkpoint,
+        num_multimask_outputs=num_multimask_outputs,
+        checkpoint=checkpoint
     )
 
 
@@ -57,6 +58,7 @@ def _build_sam(
     encoder_depth,
     encoder_num_heads,
     encoder_global_attn_indexes,
+    num_multimask_outputs,
     checkpoint=None,
 ):
     prompt_embed_dim = 256
@@ -85,7 +87,7 @@ def _build_sam(
             mask_in_chans=16,
         ),
         mask_decoder=MaskDecoder(
-            num_multimask_outputs=3,
+            num_multimask_outputs=num_multimask_outputs,
             transformer=TwoWayTransformer(
                 depth=2,
                 embedding_dim=prompt_embed_dim,
@@ -93,15 +95,24 @@ def _build_sam(
                 num_heads=8,
             ),
             transformer_dim=prompt_embed_dim,
-            iou_head_depth=3,
-            iou_head_hidden_dim=256,
         ),
         pixel_mean=[123.675, 116.28, 103.53],
         pixel_std=[58.395, 57.12, 57.375],
     )
-    sam.eval()
+    # sam.eval()
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
-            state_dict = torch.load(f)
-        sam.load_state_dict(state_dict)
+            ckpt_state_dict = torch.load(f)
+        new_state_dict=patch_state_dict(sam.state_dict(), ckpt_state_dict)
+        sam.load_state_dict(new_state_dict)
     return sam
+
+def patch_state_dict(state_dict, ckpt_state_dict):
+    # filter out except_keys
+    except_keys = ['mask_tokens', 'output_hypernetworks_mlps', 'iou_prediction_head', 'iou_token']
+    
+    new_state_dict = {k: v for k, v in ckpt_state_dict.items() if not any([except_key in k for except_key in except_keys])}
+    state_dict.update(new_state_dict)
+
+    return state_dict
+    
