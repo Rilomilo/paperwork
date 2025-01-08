@@ -8,7 +8,7 @@ from .segment_anything import build_sam_vit_b
 from .segment_anything.sam_lora import LoRA_Sam
 
 def get_model(name, output_ch, weights=None, rank=None):
-    if name=="U_Net":
+    if name=="u-net":
         model=U_Net(img_ch=3, output_ch=output_ch)
     elif name=="u-resnet34":
         model = smp.Unet(

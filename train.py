@@ -7,6 +7,7 @@ from utils.common import set_seeds
 from utils.dataloader import get_dataloader
 from utils.metrics import WeightedBinaryDiceLoss, mIoU
 from utils.logger import Logger
+from utils.cli_parser import parse_args
 from config import config
 from models import get_model
 from val import validate
@@ -27,7 +28,7 @@ def train(
     logger=Logger(**config)
     train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader(dataset, fold, batch_size=batch_size, data_workers=data_workers)
     num_class=len(train_dataset.classes)
-    model = get_model(model, output_ch=num_class).to(device)
+    model = get_model(model, output_ch=num_class, rank=config["rank"]).to(device)
 
     loss_fn = WeightedBinaryDiceLoss(loss_weight)
 
@@ -71,11 +72,7 @@ def train(
     logger.finish()
 
 def main():
-    params={
-        "dataset": "traffic",
-        "model": "u-resnet34"
-    }
-    config.update(params)
+    parse_args(config)
     print(config)
     train(**config)
 

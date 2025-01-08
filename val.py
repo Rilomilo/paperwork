@@ -7,6 +7,7 @@ from utils.common import set_seeds
 from utils.metrics import WeightedBinaryDiceLoss, dice_coefficient, mIoU
 from utils.logger import Logger
 from utils.dataloader import get_dataloader
+from utils.cli_parser import parse_args
 from models import load_checkpoint, get_model
 
 def validate(
@@ -54,10 +55,8 @@ def validate(
     return is_best, metrics
 
 def main():
-    params={
-        "checkpoint": "output/paperwork2024-11-22-122955/latest.pt"
-    }
-    config.update(params)
+    parse_args(config)
+    print(config)
 
     device, model, batch_size, data_workers, fold, checkpoint=config["device"], config["model"], config["batch_size"], config["data_workers"], config["fold"], config["checkpoint"]
 

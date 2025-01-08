@@ -1,14 +1,17 @@
 config={
     "project": "paperwork",
     "device": "cuda",
-    "model": "U_Net",
+    "checkpoint": None,
+    "model": "sam_lora",
+    "rank": 4,
     "loss_weight": {
         "bce": 0.5,
         "dice": 0.5
     },
     "epochs":10,
-    "batch_size":4,
+    "dataset":"PA",
+    "batch_size":2,
     "data_workers": 2,
-    "lr":1e-4,
+    "lr":1e-5,
     "fold":0
 }
