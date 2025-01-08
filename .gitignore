@@ -11,5 +11,6 @@ __pycache__/
 tmp/
 weights/
 *.jpg
+*.zip
 EDA.ipynb
 test*

@@ -32,7 +32,7 @@ def train(
 
     loss_fn = WeightedBinaryDiceLoss(loss_weight)
 
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.1)
 
     for epoch in range(epochs): # epoch start
         model.train()
@@ -79,4 +79,4 @@ def main():
 if __name__=="__main__":
     set_seeds(0)
     main()
-    # 修改学习率调整策略，调整参数位置，增加新数据集
+    
