@@ -14,3 +14,4 @@ weights/
 *.zip
 EDA.ipynb
 test*
+*.sh
