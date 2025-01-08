@@ -215,8 +215,8 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
     train_dataset.view(train_idx)
     val_dataset.view(val_idx)
 
-    train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, shuffle=True)
-    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, shuffle=True)
+    train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
+    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 

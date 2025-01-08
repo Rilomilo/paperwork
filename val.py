@@ -58,15 +58,15 @@ def main():
     parse_args(config)
     print(config)
 
-    device, model, batch_size, data_workers, fold, checkpoint=config["device"], config["model"], config["batch_size"], config["data_workers"], config["fold"], config["checkpoint"]
+    device, model, rank, dataset, batch_size, data_workers, fold, checkpoint=config["device"], config["model"], config["rank"], config["dataset"], config["batch_size"], config["data_workers"], config["fold"], config["checkpoint"]
 
-    train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader("PA", fold, batch_size=batch_size, data_workers=data_workers)
+    train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader(dataset, fold, batch_size=batch_size, data_workers=data_workers)
     
     ckpt = load_checkpoint(checkpoint)
     epoch, weights, ckpt_config = ckpt["epoch"], ckpt["model"], ckpt["opt"]
     epochs=ckpt_config["epochs"]
 
-    model = get_model(config["model"], output_ch=len(val_dataset.classes), weights=weights)
+    model = get_model(config["model"], output_ch=len(val_dataset.classes), weights=weights, rank=rank)
 
     logger = Logger(**config)
 
