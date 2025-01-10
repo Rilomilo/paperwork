@@ -28,7 +28,7 @@ def train(
     logger=Logger(**config)
     train_dataset, val_dataset, train_dataloader, val_dataloader = get_dataloader(dataset, fold, batch_size=batch_size, data_workers=data_workers)
     num_class=len(train_dataset.classes)
-    model = get_model(model, output_ch=num_class, rank=config["rank"]).to(device)
+    model = get_model(model, output_ch=num_class, rank=config["rank"], sam_pretrain_weights=config["sam_pretrain_weights"]).to(device)
 
     loss_fn = WeightedBinaryDiceLoss(loss_weight)
 

@@ -3,7 +3,8 @@ import argparse
 def parse_args(known_args:dict):
     parser = argparse.ArgumentParser()
     parser.add_argument('--checkpoint', type=str)
-    parser.add_argument('--model', type=str, choices=['u-net', 'u-resnet34', 'sam', 'sam_lora'])
+    parser.add_argument('--model', type=str, choices=['u-net', 'u-resnet34', 'u-net++', 'deeplabv3+', 'sam', 'sam_lora'])
+    parser.add_argument('--sam_pretrain_weights', type=str)
     parser.add_argument('--rank', type=int)
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--lr', type=float)

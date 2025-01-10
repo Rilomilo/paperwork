@@ -3,7 +3,8 @@ config={
     "device": "cuda",
     "checkpoint": None,
     "model": "sam_lora",
-    "rank": 4,
+    "sam_pretrain_weights": None,
+    "rank": None,
     "loss_weight": {
         "bce": 0.5,
         "dice": 0.5
