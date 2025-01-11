@@ -70,14 +70,14 @@ def parse_dataset(meta_file):
     return cls2idx, classes
 
 class PleomorphicAdenomaDataset(Dataset):
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, subset=Path("raw")) -> None:
         super().__init__()
 
-        entries=os.listdir(path/"raw")
+        entries=os.listdir(path/subset)
         json_files=[entry for entry in entries if entry.endswith(".json")]
         json_files.sort()
 
-        self.dir=path/"raw"
+        self.dir=path/subset
         self.json_files=json_files
         self.cls2idx, self.classes=parse_dataset(path/"meta.json")
 
@@ -202,6 +202,10 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
         path=Path("data/pleomorphic-adenoma/")
         train_dataset=PleomorphicAdenomaDataset(path)
         val_dataset=PleomorphicAdenomaDataset(path)
+    if name=="PA284":
+        path=Path("data/pleomorphic-adenoma/")
+        train_dataset=PleomorphicAdenomaDataset(path, subset="284")
+        val_dataset=PleomorphicAdenomaDataset(path, subset="284")
     elif name=="traffic":
         path=Path("data/traffic/")
         train_dataset=TrafficDataset(path)
@@ -221,7 +225,7 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
 if __name__=="__main__":
-    # get_dataloader("traffic", 0, 4, 4)
+    get_dataloader("PA284", 0, 4, 4)
     dataset=TrafficDataset(Path("data/traffic/"))
     dataset[0]
     pass
