@@ -193,6 +193,41 @@ class CityscapesDataset(Dataset):
 
         return image, label
 
+class CRAGDataset(Dataset):
+    def __init__(self, path, split='train'):
+        super().__init__()
+
+        self.image_dir = path/split/"Images"
+        self.label_dir = path/split/"Annotation"
+        self.entries=os.listdir(self.image_dir)
+        self.cls2idx, self.classes=parse_dataset(path/"meta.json")
+                
+    def __len__(self):
+            return len(self.entries)
+
+    def __getitem__(self, idx):
+        entry=self.entries[idx]
+        image_path = self.image_dir/entry
+        label_path = self.label_dir/entry
+
+        image = Image.open(image_path).convert('RGB')
+        image = to_tensor(image)
+        
+        mask = Image.open(label_path)
+        mask = np.array(mask)
+        mask[mask!=0]=1 # convert instance mask to semantic mask
+        mask=torch.tensor(mask, dtype=torch.long) # one_hot requires long type
+        masks=torch.nn.functional.one_hot(mask, len(self.classes)).permute(2,0,1)
+
+        # transform image and masks
+        # h, w = image.shape[-2:]
+        # scale=1024/h
+        # new_w=round(w*scale)
+        image = resize(image, size=(1024, 1024), antialias=False) # 1516 x w -> 1024x 1024
+        masks = resize(masks, size=(1024, 1024), antialias=False)
+
+        return image, masks, entry
+
 def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True):
     """
         dataset: dataset name
@@ -210,14 +245,19 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
         path=Path("data/traffic/")
         train_dataset=TrafficDataset(path)
         val_dataset=TrafficDataset(path)
+    elif name=="CRAG":
+        path=Path("data/CRAG/")
+        train_dataset=CRAGDataset(path, "train")
+        val_dataset=CRAGDataset(path, "valid")
     else:
         raise ValueError("Invalid dataset name")
 
-    kfold = KFold(n_splits=5, shuffle=True, random_state=0)
-    splits = list(kfold.split(train_dataset))
-    train_idx, val_idx = splits[fold]
-    train_dataset.view(train_idx)
-    val_dataset.view(val_idx)
+    if name in ["PA", "PA284", "traffic"]:
+        kfold = KFold(n_splits=5, shuffle=True, random_state=0)
+        splits = list(kfold.split(train_dataset))
+        train_idx, val_idx = splits[fold]
+        train_dataset.view(train_idx)
+        val_dataset.view(val_idx)
 
     train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
     val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
@@ -225,7 +265,7 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
 if __name__=="__main__":
-    get_dataloader("PA284", 0, 4, 4)
-    dataset=TrafficDataset(Path("data/traffic/"))
+    # get_dataloader("PA284", 0, 4, 4)
+    dataset=CRAGDataset(Path("data/CRAG/"), "train")
     dataset[0]
     pass
