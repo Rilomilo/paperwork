@@ -8,7 +8,7 @@ def parse_args(known_args:dict):
     parser.add_argument('--rank', type=int)
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--lr', type=float)
-    parser.add_argument('--dataset', type=str, choices=['PA', 'PA284', 'traffic', 'CRAG'])
+    parser.add_argument('--dataset', type=str, choices=['PA', 'PA284', 'traffic', 'CRAG', 'cityscapes'])
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--data_workers', type=int)
 

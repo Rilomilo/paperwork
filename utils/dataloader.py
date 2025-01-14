@@ -157,22 +157,23 @@ class TrafficDataset(Dataset):
         self.entries=entries
 
 class CityscapesDataset(Dataset):
-    def __init__(self, root, split='train', transform=None):
-        self.root = root
-        self.split = split
-        self.transform = transform
-        self.images_dir = os.path.join(root, 'leftImg8bit', split)
-        self.labels_dir = os.path.join(root, 'gtFine', split)
-        self.image_paths = []
-        self.label_paths = []
+    def __init__(self, path, split='train'):
+        image_paths = []
+        label_paths =[]
 
-        for city in os.listdir(self.images_dir):
-            img_dir = os.path.join(self.images_dir, city)
-            lbl_dir = os.path.join(self.labels_dir, city)
+        for city in os.listdir(path/"leftImg8bit"/split):
+            img_dir = path/"leftImg8bit"/split/city
+            lbl_dir = path/"mask"/split/city
+
             for file_name in os.listdir(img_dir):
-                self.image_paths.append(os.path.join(img_dir, file_name))
+                image_paths.append(os.path.join(img_dir, file_name))
                 label_name = file_name.replace('_leftImg8bit.png', '_gtFine_labelIds.png')
-                self.label_paths.append(os.path.join(lbl_dir, label_name))
+                label_paths.append(os.path.join(lbl_dir, label_name))
+
+        self.root = path
+        self.image_paths = image_paths
+        self.label_paths = label_paths
+        self.cls2idx, self.classes=parse_dataset(path/"meta.json")
                 
     def __len__(self):
             return len(self.image_paths)
@@ -180,18 +181,21 @@ class CityscapesDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         label_path = self.label_paths[idx]
+        entry= os.path.basename(image_path)
 
         image = Image.open(image_path).convert('RGB')
-        label = Image.open(label_path)
+        image = to_tensor(image)
 
-        if self.transform:
-            image = self.transform(image)
-        
-        # Convert label image to tensor and process it as necessary for your task
-        # For example, if you want to convert it to a numpy array:
-        label = np.array(label, dtype=np.int32)
+        mask = Image.open(label_path)
+        mask = np.array(mask)
+        mask=torch.tensor(mask, dtype=torch.long) # one_hot requires long type
+        masks=torch.nn.functional.one_hot(mask, len(self.classes)).permute(2,0,1)
 
-        return image, label
+        # transform image and masks
+        image = resize(image, size=(512, 1024), antialias=False) # 1024 x 2048->512 x 1024
+        masks = resize(masks, size=(512, 1024), antialias=False)
+
+        return image, masks, entry
 
 class CRAGDataset(Dataset):
     def __init__(self, path, split='train'):
@@ -249,6 +253,10 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
         path=Path("data/CRAG/")
         train_dataset=CRAGDataset(path, "train")
         val_dataset=CRAGDataset(path, "valid")
+    elif name=="cityscapes":
+        path=Path("data/cityscapes/")
+        train_dataset=CityscapesDataset(path, "train")
+        val_dataset=CityscapesDataset(path, "val")
     else:
         raise ValueError("Invalid dataset name")
 
@@ -260,12 +268,12 @@ def get_dataloader(name, fold, batch_size, data_workers, persistent_workers=True
         val_dataset.view(val_idx)
 
     train_dataloader=DataLoader(train_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
-    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=True)
+    val_dataloader=DataLoader(val_dataset, batch_size=batch_size, num_workers=data_workers, persistent_workers=persistent_workers, drop_last=True, shuffle=False)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
 
 if __name__=="__main__":
     # get_dataloader("PA284", 0, 4, 4)
-    dataset=CRAGDataset(Path("data/CRAG/"), "train")
+    dataset=CityscapesDataset(Path("data/cityscapes/"), "train")
     dataset[0]
     pass
