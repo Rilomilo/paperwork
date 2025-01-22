@@ -18,7 +18,7 @@ class DiceLoss(nn.Module):
         dice = (2 * intersect + smooth) / (preds_area + target_area + smooth) # [N, n_classes]
         loss = (1 - dice).mean()
 
-        return loss, dice
+        return loss
 
 class WeightedBinaryDiceLoss(nn.Module):
     def __init__(self, loss_weight, softmax=False):
@@ -46,23 +46,23 @@ class WeightedBinaryDiceLoss(nn.Module):
         prediction=prediction[:,1:,:,:]
         mask = mask[:,1:,:,:]
 
-        dice_loss, dice = self.dice_fn(prediction, mask)
+        dice_loss = self.dice_fn(prediction, mask)
         bce_loss = self.bce_fn(prediction, mask)
         loss= self.weight["bce"]*bce_loss + self.weight["dice"]*dice_loss
 
-        return loss, dice
+        return loss
 
 def dice_coefficient(preds, target):
     """
         preds & target: [N, n_classes, H, W]
         dice = 2 * intersect/(preds_area + target_area)
     """
+    assert preds.dtype == torch.int64, "preds should be one hot encoded"
     # ignore background class
     preds=preds[:,1:,:,:]
     target = target[:,1:,:,:]
 
     smooth = 1e-5
-    preds = (preds > 0.5).int()
 
     intersect = torch.sum(preds * target, dim=(-1, -2))
     target_area = torch.sum(target, dim=(-1, -2))
@@ -76,12 +76,12 @@ def mIoU(preds, target):
         preds & target: [N, n_classes, H, W]
         dice =  TP/(TP+FP+FN)
     """
+    assert preds.dtype == torch.int64, "preds should be one hot encoded"
     # ignore background class
-    preds=preds[:,1:,:,:]
+    preds = preds[:,1:,:,:]
     target = target[:,1:,:,:]
 
     smooth = 1e-5
-    preds = (preds > 0.5).int()
 
     intersection = torch.sum(preds * target, dim=(-1, -2))
     target_area = torch.sum(target, dim=(-1, -2))

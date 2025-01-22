@@ -5,7 +5,7 @@ import torch.optim as optim
 
 from utils.common import set_seeds
 from utils.dataloader import get_dataloader
-from utils.metrics import WeightedBinaryDiceLoss, mIoU
+from utils.metrics import WeightedBinaryDiceLoss, mIoU, dice_coefficient
 from utils.logger import Logger
 from utils.cli_parser import parse_args
 from config import config
@@ -58,13 +58,18 @@ def train(
             images, masks = images.to(device), masks.to(device)
 
             outputs = model(images)
-            loss, dice = loss_fn(outputs, masks)
+            loss = loss_fn(outputs, masks)
             
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
             with torch.no_grad():
-                miou=mIoU(outputs, masks)
+                # turn scores to one hot
+                outputs = outputs.argmax(axis=1)
+                outputs = torch.nn.functional.one_hot(outputs, len(val_dataset.classes)).permute(0,3,1,2)
+
+                dice = dice_coefficient(outputs, masks)
+                miou = mIoU(outputs, masks)
 
             loss=loss.item()
             dice=dice.cpu().detach().numpy()
