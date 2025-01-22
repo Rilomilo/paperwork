@@ -9,7 +9,7 @@ from utils.metrics import WeightedBinaryDiceLoss, mIoU, dice_coefficient
 from utils.logger import Logger
 from utils.cli_parser import parse_args
 from config import config
-from models import get_model
+from models import get_model, load_checkpoint
 from val import validate
 
 def train(
@@ -48,6 +48,15 @@ def train(
         verbose=True
     )
     step=0
+
+    if config["checkpoint"]:
+        ckpt = load_checkpoint(config["checkpoint"])
+        epoch, step, model_state, optimizer_state, warmup_scheduler_state, decay_scheduler_state, ckpt_config = ckpt["epoch"], ckpt["step"], ckpt["model"], ckpt["optimizer"], ckpt["warmup_scheduler"], ckpt["decay_scheduler"], ckpt["opt"]
+        model.load_state_dict(model_state)
+        optimizer.load_state_dict(optimizer_state)
+        warmup_scheduler.load_state_dict(warmup_scheduler_state)
+        decay_scheduler.load_state_dict(decay_scheduler_state)
+        epochs = ckpt_config["epochs"]
 
     for epoch in range(epochs): # epoch start
         model.train()
@@ -89,7 +98,7 @@ def train(
             val_dataloader,
             logger
         )
-        logger.log_checkpoint(is_best_fit, epoch, val_metrics, model, optimizer, config)
+        logger.log_checkpoint(is_best_fit, epoch, step, val_metrics, model, optimizer, warmup_scheduler, decay_scheduler, config)
 
         # end training according to lr
         decay_scheduler.step(train_metrics["train/loss"])

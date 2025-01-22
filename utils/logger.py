@@ -98,12 +98,15 @@ class Logger:
         else:
             return False, metrics
         
-    def log_checkpoint(self, is_best_fit, num_epoch, metrics, model:nn.Module, optimizer, config):
+    def log_checkpoint(self, is_best_fit, num_epoch, step, metrics, model:nn.Module, optimizer,warmup_scheduler, decay_scheduler, config):
         ckpt = {
             "epoch": num_epoch,
+            "step": step,
             "metrics": metrics,
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
+            "warmup_scheduler": warmup_scheduler.state_dict(),
+            "decay_scheduler": decay_scheduler.state_dict(),
             "opt": config,
             "date": str(datetime.now()),
         }
