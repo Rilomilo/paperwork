@@ -33,6 +33,21 @@ def train(
     loss_fn = WeightedBinaryDiceLoss(loss_weight)
 
     optimizer = optim.AdamW(model.parameters(), lr=lr, betas=(0.9, 0.999), weight_decay=0.1)
+    warmup_steps=250
+    warmup_scheduler=torch.optim.lr_scheduler.LinearLR(
+        optimizer, 
+        start_factor=lr, 
+        total_iters=warmup_steps
+    )
+    decay_scheduler=optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer=optimizer, 
+        factor=0.3, 
+        patience=1, 
+        threshold=1e-4, 
+        threshold_mode="rel", 
+        verbose=True
+    )
+    step=0
 
     for epoch in range(epochs): # epoch start
         model.train()
@@ -54,11 +69,13 @@ def train(
             loss=loss.item()
             dice=dice.cpu().detach().numpy()
             miou=miou.cpu().detach().numpy()
-            logger.log_step(epoch, epochs, loss, dice, miou)
+            logger.log_step(epoch, epochs, loss, dice, miou, phase="train", lr=optimizer.state_dict()['param_groups'][0]['lr'])
+            warmup_scheduler.step()
+            step+=1
 
-        logger.log_epoch(phase="train", epoch=epoch)
+        _, train_metrics = logger.log_epoch(phase="train", epoch=epoch)
 
-        is_best_fit, metrics=validate(
+        is_best_fit, val_metrics=validate(
             device,
             epoch,
             epochs,
@@ -67,7 +84,13 @@ def train(
             val_dataloader,
             logger
         )
-        logger.log_checkpoint(is_best_fit, epoch, metrics, model, optimizer, config)
+        logger.log_checkpoint(is_best_fit, epoch, val_metrics, model, optimizer, config)
+
+        # end training according to lr
+        decay_scheduler.step(train_metrics["train/loss"])
+        lr=optimizer.state_dict()['param_groups'][0]['lr']
+        if step>warmup_steps and lr<1e-7:
+            break
     
     logger.finish()
 

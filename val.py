@@ -45,7 +45,7 @@ def validate(
         dice=dice.cpu().detach().numpy()
         miou=miou.cpu().detach().numpy()
 
-        logger.log_step(epoch, epochs, loss, dice, miou)
+        logger.log_step(epoch, epochs, loss, dice, miou, phase="val")
         # visualize first 2 batch
         if i<=1:
             logger.log_visualization(image_paths, epoch, images, outputs, masks, val_dataset.classes ,dice)

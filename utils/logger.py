@@ -42,7 +42,7 @@ class Logger:
 
         print(("\n" + "%12s" * 4)% ("Epoch", "Loss", "Dice", "mIoU"))
 
-    def log_step(self, epoch, epochs, loss:float, dice:np.ndarray, miou:np.ndarray):
+    def log_step(self, epoch, epochs, loss:float, dice:np.ndarray, miou:np.ndarray, phase, lr=None):
         self.step_loss_metrics.append(loss)
         self.step_dice_metrics.extend(dice)
         self.step_miou_metrics.extend(miou)
@@ -55,6 +55,13 @@ class Logger:
                 miou.mean()
             )
         )
+
+        if phase=="train":
+            metrics={
+                "loss": loss,
+                "lr": lr
+            }
+            self.log_metrics(metrics, commit=True)
 
     def log_epoch(self, phase, epoch):
         """
@@ -75,12 +82,13 @@ class Logger:
         mixed_metric = 0.5 * dice_metric["avg"] + 0.5 * miou_metric["avg"]
 
         metrics={
+            "epoch": epoch,
             f"{phase}/loss": loss,
             f"{phase}/dice": dice_metric,
             f"{phase}/miou": miou_metric
         }
         print(metrics)
-        self.log_metrics(metrics, step=epoch, commit=phase=="val")
+        self.log_metrics(metrics, commit=False) # commit in training log step
 
         is_best_fit=mixed_metric>self.max_validation_mixed_metric
 
