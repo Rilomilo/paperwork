@@ -71,6 +71,20 @@ def train(
             
             loss.backward()
             optimizer.step()
+
+            # check grad
+            max_grad = 0.0
+            total_grad_norm = 0.0
+
+            for param in model.parameters():
+                if param.grad is not None:
+                    # max value
+                    max_grad = max(max_grad, param.grad.data.abs().max().item())
+                    
+                    # norm
+                    param_norm = param.grad.data.norm(2)  # 每个参数的梯度 L2 范数
+                    total_grad_norm += param_norm.item()
+
             optimizer.zero_grad()
             with torch.no_grad():
                 # turn scores to one hot
@@ -84,6 +98,15 @@ def train(
             dice=dice.cpu().detach().numpy()
             miou=miou.cpu().detach().numpy()
             logger.log_step(epoch, epochs, loss, dice, miou, phase="train", lr=optimizer.state_dict()['param_groups'][0]['lr'])
+            logger.log_visualization(names, epoch, images, outputs, masks, val_dataset.classes, dice, "local")
+            log_info=f"Epoch {epoch:3}, Step {step:5}, Loss {loss:.4f}, Grad max {max_grad:.8f}, Grad Norm {total_grad_norm:.8f}, "
+            
+            viz_path=[]
+            for name in names:
+                viz_path.append(str(logger.log_dir/f"{name}_e{epoch}_label.jpg"))
+            log_info+=", ".join(viz_path)
+            print(log_info, file=logger.log_fp)
+
             warmup_scheduler.step()
             step+=1
 

@@ -26,6 +26,7 @@ class Logger:
         log_dir.mkdir()
 
         self.log_dir=log_dir
+        self.log_fp=open(log_dir/"log.log", "w")
         self.max_validation_mixed_metric=0
         self.viz_table = wandb.Table(columns=["name", "epoch", "pred", "label", "dice"])
 
@@ -137,11 +138,12 @@ class Logger:
 
                 self.viz_table.add_data(name, epoch, pred, label, dice_score)
             elif mode=="local":
-                visualize_label(image, label, classes, output_path=self.log_dir/f"{name}_label.jpg")
-                visualize_label(image, pred, classes, output_path=self.log_dir/f"{name}_pred.jpg")
+                visualize_label(image, label, classes, output_path=self.log_dir/f"{name}_e{epoch}_label.jpg")
+                visualize_label(image, pred, classes, output_path=self.log_dir/f"{name}_e{epoch}_pred.jpg")
 
     def finish(self):
         self.run.log({"Visualization": self.viz_table})
+        self.log_fp.close()
 
 if __name__=="__main__":
     pass
