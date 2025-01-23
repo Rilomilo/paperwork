@@ -48,7 +48,7 @@ def validate(
         logger.log_step(epoch, epochs, loss, dice, miou, phase="val")
         # visualize first 2 batch
         if i<=1:
-            logger.log_visualization(image_paths, epoch, images, outputs, masks, val_dataset.classes ,dice)
+            logger.log_visualization(image_paths, epoch, images, outputs, masks, val_dataset.classes, dice, "wandb")
 
     is_best, metrics=logger.log_epoch(phase="val", epoch=epoch)
 

@@ -116,7 +116,7 @@ class Logger:
             shutil.copy(self.log_dir / "latest.pt", self.log_dir / "best.pt")
             print("Best model saved")
 
-    def log_visualization(self, names, epoch, images, preds, labels, classes, dice):
+    def log_visualization(self, names, epoch, images, preds, labels, classes, dice, mode="wandb"):
         # size=224 # resize images to improve loading speed
         # images = resize(images, size=size, antialias=False)
         # preds = resize(preds, size=size, antialias=False)
@@ -128,13 +128,17 @@ class Logger:
         
         for name, image, pred, label, dice_score in zip(names, images, preds, labels, dice):
             image=to_image(image)
-            label=visualize_label(image, label, classes)
-            pred=visualize_label(image, pred, classes)
-            pred = wandb.Image(pred)
-            label = wandb.Image(label)
-            dice_score=dict(zip(classes[1:], list(dice_score)))
+            if mode=="wandb":
+                label=visualize_label(image, label, classes)
+                pred=visualize_label(image, pred, classes)
+                pred = wandb.Image(pred)
+                label = wandb.Image(label)
+                dice_score=dict(zip(classes[1:], list(dice_score)))
 
-            self.viz_table.add_data(name, epoch, pred, label, dice_score)
+                self.viz_table.add_data(name, epoch, pred, label, dice_score)
+            elif mode=="local":
+                visualize_label(image, label, classes, output_path=self.log_dir/f"{name}_label.jpg")
+                visualize_label(image, pred, classes, output_path=self.log_dir/f"{name}_pred.jpg")
 
     def finish(self):
         self.run.log({"Visualization": self.viz_table})

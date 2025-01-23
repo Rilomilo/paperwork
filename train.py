@@ -42,7 +42,7 @@ def train(
     decay_scheduler=optim.lr_scheduler.ReduceLROnPlateau(
         optimizer=optimizer, 
         factor=0.3, 
-        patience=1, 
+        patience=0, 
         threshold=1e-4, 
         threshold_mode="rel", 
         verbose=True
@@ -63,7 +63,7 @@ def train(
 
         progress=tqdm(train_dataloader)
         logger.begin_epoch(progress, train_dataset.classes)
-        for i, (images, masks, _) in enumerate(progress):
+        for i, (images, masks, names) in enumerate(progress):
             images, masks = images.to(device), masks.to(device)
 
             outputs = model(images)
