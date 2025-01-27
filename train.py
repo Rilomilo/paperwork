@@ -72,18 +72,20 @@ def train(
             loss.backward()
             optimizer.step()
 
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.5)
             # check grad
             max_grad = 0.0
-            total_grad_norm = 0.0
-
+            layer_grad_norm_ls=[]
+            
             for param in model.parameters():
                 if param.grad is not None:
                     # max value
                     max_grad = max(max_grad, param.grad.data.abs().max().item())
+                    # L2 norm
+                    layer_grad_norm_ls.append(torch.norm(param.grad.data, 2))
                     
-                    # norm
-                    param_norm = param.grad.data.norm(2)  # 每个参数的梯度 L2 范数
-                    total_grad_norm += param_norm.item()
+            
+            total_grad_norm = torch.norm(torch.stack(layer_grad_norm_ls), 2)
 
             optimizer.zero_grad()
             with torch.no_grad():
