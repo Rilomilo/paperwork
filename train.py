@@ -1,3 +1,4 @@
+import signal
 from tqdm import tqdm
 
 import torch
@@ -49,6 +50,15 @@ def train(
     )
     step=0
 
+    # interactive early stopping
+    terminate_signal=False
+    def signal_handler(sig, frame):
+        print(f"{sig} signal received, terminating...")
+        nonlocal terminate_signal
+        terminate_signal=True
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
     if config["checkpoint"]:
         ckpt = load_checkpoint(config["checkpoint"])
         epoch, step, model_state, optimizer_state, warmup_scheduler_state, decay_scheduler_state, ckpt_config = ckpt["epoch"], ckpt["step"], ckpt["model"], ckpt["optimizer"], ckpt["warmup_scheduler"], ckpt["decay_scheduler"], ckpt["opt"]
@@ -64,6 +74,7 @@ def train(
         progress=tqdm(train_dataloader)
         logger.begin_epoch(progress, train_dataset.classes)
         for i, (images, masks, names) in enumerate(progress):
+            step+=1
             images, masks = images.to(device), masks.to(device)
 
             outputs = model(images)
@@ -85,7 +96,8 @@ def train(
             miou=miou.cpu().detach().numpy()
             logger.log_step(epoch, epochs, loss, dice, miou, phase="train", lr=optimizer.state_dict()['param_groups'][0]['lr'])
             warmup_scheduler.step()
-            step+=1
+            if terminate_signal:
+                break
 
         _, train_metrics = logger.log_epoch(phase="train", epoch=epoch)
 
@@ -100,10 +112,10 @@ def train(
         )
         logger.log_checkpoint(is_best_fit, epoch, step, val_metrics, model, optimizer, warmup_scheduler, decay_scheduler, config)
 
-        # end training according to lr
+        # end training check
         decay_scheduler.step(train_metrics["train/loss"])
         lr=optimizer.state_dict()['param_groups'][0]['lr']
-        if step>warmup_steps and lr<1e-7:
+        if terminate_signal or step>warmup_steps and lr<1e-7:
             break
     
     logger.finish()
