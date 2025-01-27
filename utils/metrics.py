@@ -46,11 +46,11 @@ class WeightedBinaryDiceLoss(nn.Module):
         prediction=prediction[:,1:,:,:]
         mask = mask[:,1:,:,:]
 
-        dice_loss = self.dice_fn(prediction, mask)
+        # dice_loss = self.dice_fn(prediction, mask)
         bce_loss = self.bce_fn(prediction, mask)
-        loss= self.weight["bce"]*bce_loss + self.weight["dice"]*dice_loss
+        # loss= self.weight["bce"]*bce_loss + self.weight["dice"]*dice_loss
 
-        return loss
+        return bce_loss
 
 def dice_coefficient(preds, target):
     """
