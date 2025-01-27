@@ -43,7 +43,7 @@ def train(
         optimizer=optimizer, 
         factor=0.3, 
         patience=0, 
-        threshold=1e-4, 
+        threshold=1e-3, 
         threshold_mode="rel", 
         verbose=True
     )
