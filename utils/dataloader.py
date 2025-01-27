@@ -167,7 +167,7 @@ class CityscapesDataset(Dataset):
 
             for file_name in os.listdir(img_dir):
                 image_paths.append(os.path.join(img_dir, file_name))
-                label_name = file_name.replace('_leftImg8bit.png', '_gtFine_labelIds.png')
+                label_name = file_name.replace('_leftImg8bit.png', '_gtFine_labelTrainIds.png')
                 label_paths.append(os.path.join(lbl_dir, label_name))
 
         self.root = path
